@@ -176,12 +176,16 @@ def _extract_value(obs: dict) -> tuple[str, str]:
         return "valueCodeableConcept", text
 
     # component[] panels — e.g. Blood Pressure
+    # Include component LOINC codes so the model can cite them from evidence
     components = obs.get("component")
     if components:
         parts = []
         for comp in components:
             comp_code = _extract_primary_code(comp.get("code", {}))
-            comp_label = comp_code[1] if comp_code else "?"
+            if comp_code:
+                comp_label = f"{comp_code[1]} ({comp_code[0]})"
+            else:
+                comp_label = "?"
             comp_vq = comp.get("valueQuantity", {})
             comp_val = comp_vq.get("value", "?")
             comp_unit = comp_vq.get("unit", comp_vq.get("code", ""))

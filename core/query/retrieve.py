@@ -30,6 +30,7 @@ async def retrieve(
     *,
     client_name: str,
     top_k: int = 5,
+    min_score: float = 0.4,
     rerank: bool = True,
     rerank_top_k: int = 3,
     rerank_model: str = "claude-haiku-4-5-20251001",
@@ -63,6 +64,20 @@ async def retrieve(
 
     if not candidates:
         logger.warning("No candidates found for query: %s", query[:100])
+        return []
+
+    # Filter out candidates below the minimum score threshold.
+    # This prevents irrelevant chunks from reaching the generator when
+    # hybrid search returns top_k results that don't actually match.
+    pre_filter_count = len(candidates)
+    candidates = [c for c in candidates if c.get("score", 0) >= min_score]
+    if pre_filter_count > len(candidates):
+        logger.info(
+            "Score filter (>= %.2f) removed %d/%d candidates",
+            min_score, pre_filter_count - len(candidates), pre_filter_count,
+        )
+    if not candidates:
+        logger.warning("All candidates below min_score=%.2f for query: %s", min_score, query[:100])
         return []
 
     logger.info("Hybrid search returned %d candidates", len(candidates))
