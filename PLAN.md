@@ -80,11 +80,13 @@ harness, read the trace and explain why it lost a point.
 ### 2c — Expand to full gold set
 
 - [ ] **6 more gold cases** (total 10+) — cover: valueString, Patient demographics, multi-resource questions, edge cases from real Synthea data
-- [ ] **5+ deterministic cases** in `clients/fhir_mapping/gold_sets/deterministic.json` — question + required substrings that must appear in any correct answer
+- [x] **5+ deterministic cases** in `clients/fhir_mapping/gold_sets/deterministic.json` — 5 cases created (body height, BP, smoking, atrial fib, medication refusal). Add more as gold set expands.
 - [ ] **Run all gold cases through the live pipeline** — record pass/fail per variant
 - [ ] **Document baseline metrics** in `clients/fhir_mapping/gold_sets/BASELINE.md` — agreement rate, MAE, pass rates per variant
 
 **Gate:** All 4 critical gold cases pass (correct answer, faithfulness ≥ 3, relevance ≥ 4). The should-refuse case returns `no_evidence` route. Judge behavior is understood and documented. Baseline metrics recorded.
+
+**Gate status:** 2a+2b gate items MET (5 cases pass, should-refuse routes correctly, judge documented). 2c gate items PENDING (baseline metrics, expanded gold set).
 
 ---
 
@@ -143,7 +145,7 @@ operational gaps.
 
 ### Connection management
 - [ ] **Singleton Anthropic client** — create once in `core/llm.py`, share across reshape, retrieve, generate, judge. Stop creating a new client per function call.
-- [ ] **Singleton Supabase client** — `core/db.py` (from Phase 0) used everywhere
+- [x] **Singleton Supabase client** — `core/db.py` (from Phase 0) used everywhere
 
 ### Parallelism
 - [ ] **Parallelize judge calls** — faithfulness + relevance via `asyncio.gather()` in `rubrics.py` (they're independent)
@@ -237,20 +239,20 @@ The phases are numbered for reference, but the execution order reflects
 actual risk priority — product correctness before code polish.
 
 ```
-Phase 0   Foundation + input_type fix + dedup verification
+Phase 0   Foundation + input_type fix + dedup verification       ✅ DONE
   │
   ▼
-Phase 1   Wire dead validation code (trust layer must actually run)
+Phase 1   Wire dead validation code (trust layer must actually run)  ✅ DONE
   │
   ▼
-Phase 2a  4 gold cases covering hard variants (find product breaks NOW)
+Phase 2a  4 gold cases covering hard variants + 2 product fixes     ✅ DONE
   │
   ▼
-Phase 2b  Read the faithfulness-4 trace, understand judge behavior
+Phase 2b  Read the faithfulness-4 trace, understand judge behavior  ✅ DONE
   │
   ├──────────────────────┐
   ▼                      ▼
-Phase 2c + 3            Phase 4
+Phase 2c + 3            Phase 4              ◀── YOU ARE HERE
 Full gold set +         Production hardening
 Unit tests (parallel)   (parallel with tests)
   │                      │
@@ -284,7 +286,7 @@ Additional proofs:
 
 3. **The trust layer is real:** Gold set passes across all three value[x] variants,
    SNOMED Condition, and the should-refuse case. Judge behavior documented.
-   **Status: NOT STARTED**
+   **Status: IN PROGRESS** — 5 critical gold cases pass (2a done). 2 product breaks found + fixed. Judge analyzed as strict-and-right (2b done). Full gold set expansion (2c) not started.
 
 4. **The architecture is real:** A second, non-healthcare client runs on the same core
    with zero core changes.
