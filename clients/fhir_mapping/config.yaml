@@ -1,0 +1,70 @@
+# fhir_mapping client config
+# All domain-specific dials live here. The core reads this; never hardcodes these values.
+
+client:
+  name: "fhir_mapping"
+  description: "HL7 v2 OBX → FHIR R4 Observation mapping assistant"
+
+data:
+  source_dir: ""  # path to extracted Synthea fhir/ directory
+  resource_types:
+    - Observation
+    - Condition
+    - Patient
+  primary_target: "Observation"
+
+code_systems:
+  loinc:
+    system_url: "http://loinc.org"
+    display_name: "LOINC"
+  snomed:
+    system_url: "http://snomed.info/sct"
+    display_name: "SNOMED CT"
+  ucum:
+    system_url: "http://unitsofmeasure.org"
+    display_name: "UCUM"
+
+chunking:
+  dedup_keys:
+    - "domain_key"
+    - "variant"
+  value_variants:
+    - "valueQuantity"
+    - "valueCodeableConcept"
+    - "component"
+    - "none"
+
+retrieval:
+  top_k: 5
+  rerank: true
+  rerank_top_k: 3
+
+generation:
+  model: "claude-sonnet-4-6"
+  max_tokens: 2048
+  temperature: 0.0
+
+judging:
+  model: "claude-haiku-4-5-20251001"
+  faithfulness:
+    scale: [1, 5]
+    threshold: 3
+  relevance:
+    scale: [1, 5]
+    threshold: 3
+
+reshape:
+  model: "claude-haiku-4-5-20251001"
+  vocabulary_hints:
+    - "LOINC"
+    - "FHIR R4"
+    - "Observation"
+    - "valueQuantity"
+    - "valueCodeableConcept"
+    - "component"
+    - "OBX segment"
+    - "HL7 v2"
+
+eval:
+  gold_sets_dir: "clients/fhir_mapping/gold_sets"
+  calibration_threshold: 0.8
