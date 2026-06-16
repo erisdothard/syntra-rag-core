@@ -1,67 +1,81 @@
 # syntra-rag-core
 
-Industry-neutral RAG pipeline. One core, many clients.
+**Production RAG pipeline with built-in trust scoring.** One core serves any domain — healthcare, logistics, legal — without changing a single line of pipeline code.
 
-## What this is
+[Live Demo](https://syntra-rag-core.vercel.app) | [Architecture](ARCHITECTURE.md) | [Build Plan](PLAN.md)
 
-A reusable Retrieval-Augmented Generation pipeline that separates **domain knowledge** from **pipeline mechanics**. The core handles chunking, embedding, retrieval, generation, and evaluation — all without knowing what domain it's serving. Each client (healthcare, logistics, legal) lives in its own `clients/<name>/` folder.
+---
 
-**First client:** HL7 v2 OBX → FHIR R4 Observation mapping assistant, running on 1,450 indexed Synthea chunks.
+## Why this exists
 
-## Architecture
+Most RAG demos retrieve chunks and hope for the best. This pipeline **validates every artifact**, **scores every answer** for faithfulness and relevance (LLM-as-judge, 1-5 rubric), and **traces every request** end-to-end. Domain knowledge is fully separated from pipeline mechanics — adding a new industry is a folder, not a fork.
+
+## What it does
 
 ```
 Question → Reshape → Retrieve (hybrid pgvector + FTS) → Rerank → Generate → Judge
                                                                          ↓
                                                                Faithfulness + Relevance
-                                                                    (1-5 rubric)
+                                                                    (1-5 rubric scored
+                                                                     against evidence)
 ```
 
-- **Offline:** parse → chunk → dedup → embed → upsert (Supabase pgvector)
-- **Live:** reshape → retrieve → generate → judge → trace
-- **Trust layer:** Pydantic validation on every artifact, LLM-as-judge on final output
+- **Offline pipeline:** parse → chunk → dedup → embed → upsert (Supabase pgvector)
+- **Live pipeline:** reshape → retrieve → rerank → generate → judge → trace
+- **Trust layer:** Pydantic validation on every artifact, LLM-as-judge on final output, regression harness, judge calibration
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full diagram.
+## Proof it works
+
+| Proof | Status |
+|-------|--------|
+| Ask a FHIR mapping question → grounded answer with faithfulness score and trace | Passing |
+| `grep -ri "loinc\|snomed\|fhir\|hl7" core/` returns nothing | Passing |
+| 11 gold cases across all value[x] variants, Conditions, and should-refuse | Passing |
+| Logistics client runs on same core, zero core changes | Passing |
+| 136 unit tests | Passing |
+
+## Two clients, one core
+
+**Healthcare (FHIR Mapping)** — 644 chunks across 8 FHIR resource types (Observation, Condition, Patient, MedicationRequest, Procedure, Immunization, DiagnosticReport, Encounter). Parses Synthea patient bundles, maps HL7 v2 segments to FHIR R4 resources.
+
+**Logistics** — Carriers, rates, and service documents. Parses structured freight data with domain-specific validation. Added without touching any file in `core/`.
 
 ## Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Vector store | Supabase pgvector (hybrid: cosine + full-text) |
+| Vector store | Supabase pgvector (hybrid: cosine + full-text search) |
 | Embeddings | Voyage AI (voyage-3, 1024 dims) |
-| Generation | Anthropic Claude |
-| Judging | Anthropic Claude (rubric-based, no self-grading) |
-| Validation | Pydantic v2 |
-| Delivery | MCP server + FastAPI |
+| Generation | Anthropic Claude (Sonnet 4.6) |
+| Judging | Anthropic Claude (Haiku 4.5, rubric-based, no self-grading) |
+| Validation | Pydantic v2 on every artifact |
+| Backend | FastAPI with SSE streaming |
+| Frontend | Next.js, Tailwind CSS, react-markdown |
+| Delivery | MCP server + REST API |
 
 ## Quick start
 
 ```bash
-# Clone and install
-git clone <repo-url>
+git clone https://github.com/erisdothard/syntra-rag-core.git
 cd syntra-rag-core
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
 
-# Configure
 cp .env.example .env
 # Fill in: ANTHROPIC_API_KEY, VOYAGE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 # Create the database schema
 psql $DATABASE_URL < db/migrations/001_init.sql
 
-# Ingest data (FHIR client)
+# Ingest data
 export FHIR_DATA_DIR=/path/to/synthea/fhir
 make ingest
 
-# Run the API
+# Start the backend
 make serve
 
-# Run tests
-make test
-
-# Check core neutrality
-make neutrality
+# Start the frontend
+cd web && npm install && npm run dev
 ```
 
 ## Adding a new client
@@ -70,12 +84,12 @@ make neutrality
    - `parser.py` — implements `DomainParser` from `core/interfaces.py`
    - `schema.py` — Pydantic models for domain-specific validation
    - `config.yaml` — retrieval dials, vocabulary hints, model settings
-   - `prompt.md` — system prompt for generation
+   - `prompt.md` — system prompt
    - `gold_sets/` — evaluation cases
 
-2. Run ingestion: `FHIR_DATA_DIR=/your/data make ingest`
+2. Run ingestion pointing to your data.
 
-3. Update `RAG_CLIENT_CONFIG` in `.env` to point to the new config.
+3. Set `RAG_CLIENT_CONFIG` to your new config.
 
 **Zero core changes required.** The core never knows what domain it's serving.
 
@@ -83,20 +97,22 @@ make neutrality
 
 ```
 syntra-rag-core/
-  core/                          # Industry-neutral pipeline
+  core/                          # Industry-neutral pipeline (zero domain terms)
     ingestion/                   # Offline: chunk + index
     query/                       # Live: reshape + retrieve + generate + orchestrate
     trust/                       # Validation + eval (judge, calibrate, regression)
-    observability/               # Structured tracing
-    interfaces.py                # The seam: Chunk + DomainParser
-    db.py                        # Shared Supabase singleton
-    llm.py                       # Shared Anthropic singleton
+    observability/               # Structured tracing (ring buffer + JSON logs)
+    interfaces.py                # The seam: Chunk + DomainParser protocol
+    db.py                        # Supabase singleton
+    llm.py                       # Anthropic singleton (max_retries=3)
     mcp_server.py                # MCP tool exposure
   clients/
-    fhir_mapping/                # First client: FHIR mapping assistant
-  api/                           # FastAPI server for the chat UI
-  tests/                         # Unit tests (80%+ coverage target)
-  db/migrations/                 # SQL schema
+    fhir_mapping/                # Healthcare: FHIR mapping assistant (8 resource types)
+    logistics/                   # Freight: carriers, rates, services
+  api/                           # FastAPI backend (SSE streaming, traces, health)
+  web/                           # Next.js chat UI (evidence panel, judge badges, pipeline trace)
+  tests/                         # 136 unit tests across 16 files
+  db/migrations/                 # SQL schema + hybrid_search RPC
   scripts/                       # Ingestion + regression runners
 ```
 
@@ -104,18 +120,10 @@ syntra-rag-core/
 
 | Command | Description |
 |---------|-------------|
-| `make install` | Install dependencies |
-| `make test` | Run tests with coverage |
+| `make test` | Run 136 tests with coverage |
 | `make lint` | Lint with ruff |
-| `make ingest` | Run offline ingestion |
+| `make ingest` | Run offline ingestion pipeline |
 | `make serve` | Start FastAPI server |
 | `make mcp` | Start MCP server |
 | `make regression` | Run full regression harness |
-| `make neutrality` | Verify core has no domain terms |
-
-## Done criteria
-
-1. **Instance works:** Ask a FHIR mapping question → grounded answer with faithfulness score and trace
-2. **Core is neutral:** `grep -ri "loinc\|snomed\|fhir\|hl7\|observation" core/` returns nothing
-3. **Trust layer is real:** Gold set passes across all value[x] variants
-4. **Architecture is real:** Second client runs on same core with zero core changes
+| `make neutrality` | Verify core has zero domain terms |
