@@ -1,5 +1,5 @@
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 
 export interface EvidenceChunk {
   domain_key: string | null;
@@ -27,28 +27,60 @@ type SSEEvent =
   | { type: "evidence"; data: EvidenceChunk[] }
   | { type: "done"; data: AskMetadata };
 
-function parseSSELine(line: string): SSEEvent | null {
-  if (!line.startsWith("data: ")) return null;
-  const raw = line.slice(6).trim();
-  if (!raw) return null;
+/**
+ * Parse a complete SSE message block (may have `event:` and `data:` lines).
+ *
+ * Backend format:
+ *   event: token\n
+ *   data: {"text": "hello"}\n\n
+ *
+ *   event: evidence\n
+ *   data: [{...}, ...]\n\n
+ *
+ *   event: done\n
+ *   data: {"route": "direct", "judge": {...}, ...}\n\n
+ */
+function parseSSEBlock(block: string): SSEEvent | null {
+  let eventType = "";
+  let dataStr = "";
+
+  for (const line of block.split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("event:")) {
+      eventType = trimmed.slice(6).trim();
+    } else if (trimmed.startsWith("data:")) {
+      dataStr = trimmed.slice(5).trim();
+    }
+  }
+
+  if (!dataStr) return null;
 
   try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const parsed = JSON.parse(dataStr);
 
-    if (parsed.type === "token" && typeof parsed.text === "string") {
+    if (eventType === "token" && typeof parsed.text === "string") {
       return { type: "token", data: parsed.text };
     }
 
-    if (parsed.type === "evidence" && Array.isArray(parsed.chunks)) {
-      return { type: "evidence", data: parsed.chunks as EvidenceChunk[] };
+    if (eventType === "evidence" && Array.isArray(parsed)) {
+      return { type: "evidence", data: parsed as EvidenceChunk[] };
     }
 
-    if (parsed.type === "done") {
-      return { type: "done", data: parsed as unknown as AskMetadata };
+    if (eventType === "done") {
+      const meta: AskMetadata = {
+        route: parsed.route ?? "direct",
+        faithfulness: parsed.judge?.faithfulness ?? 0,
+        relevance: parsed.judge?.relevance ?? 0,
+        pipeline: [],
+        evidence: [],
+      };
+      return { type: "done", data: meta };
     }
   } catch {
-    // Plain text token (non-JSON SSE)
-    return { type: "token", data: raw };
+    // If data isn't JSON and event is token, treat as plain text
+    if (eventType === "token") {
+      return { type: "token", data: dataStr };
+    }
   }
 
   return null;
@@ -79,14 +111,17 @@ export async function askQuestion(
     if (done) break;
 
     buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
 
-    for (const line of lines) {
-      const trimmed = line.trim();
+    // SSE messages are separated by double newlines
+    const blocks = buffer.split("\n\n");
+    // Last element is incomplete — keep in buffer
+    buffer = blocks.pop() ?? "";
+
+    for (const block of blocks) {
+      const trimmed = block.trim();
       if (!trimmed) continue;
 
-      const event = parseSSELine(trimmed);
+      const event = parseSSEBlock(trimmed);
       if (!event) continue;
 
       switch (event.type) {
@@ -105,7 +140,7 @@ export async function askQuestion(
 
   // Flush remaining buffer
   if (buffer.trim()) {
-    const event = parseSSELine(buffer.trim());
+    const event = parseSSEBlock(buffer.trim());
     if (event?.type === "done") onDone(event.data);
     else if (event?.type === "token") onToken(event.data);
     else if (event?.type === "evidence") onEvidence(event.data);

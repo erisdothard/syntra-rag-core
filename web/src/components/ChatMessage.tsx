@@ -4,6 +4,8 @@ import type { AskMetadata, EvidenceChunk } from "@/lib/api";
 import JudgeBadge from "./JudgeBadge";
 import EvidencePanel from "./EvidencePanel";
 import PipelineTrace from "./PipelineTrace";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface ChatMessageProps {
   question: string;
@@ -59,12 +61,14 @@ export default function ChatMessage({
       <div className="mb-2">
         <div className="max-w-[90%]">
           <div className="rounded-2xl rounded-bl-sm bg-white/[0.04] px-5 py-4 ring-1 ring-inset ring-white/[0.06]">
-            <p className="whitespace-pre-wrap text-sm leading-[1.7] text-white/80">
-              {answer}
+            <div className="prose prose-invert prose-sm max-w-none prose-headings:text-white/90 prose-headings:font-semibold prose-p:text-white/75 prose-p:leading-[1.7] prose-strong:text-white/85 prose-code:text-sky-300 prose-code:bg-white/[0.06] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:before:content-none prose-code:after:content-none prose-pre:bg-white/[0.04] prose-pre:ring-1 prose-pre:ring-inset prose-pre:ring-white/[0.08] prose-pre:rounded-lg prose-th:text-white/70 prose-td:text-white/60 prose-hr:border-white/[0.08] prose-a:text-sky-400 prose-li:text-white/70 prose-table:text-xs">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {answer}
+              </ReactMarkdown>
               {streaming && (
                 <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-sky-400" />
               )}
-            </p>
+            </div>
 
             {/* Metadata bar */}
             {metadata && (
