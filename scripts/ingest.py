@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from clients.fhir_mapping.parser import FHIRParser
+from clients.fhir_mapping.schema import validate_domain_chunk
 from core.ingestion.chunk import ingest
 from core.ingestion.index import index_chunks
 
@@ -48,7 +49,20 @@ async def main() -> None:
         logger.warning("No chunks to index — exiting")
         return
 
-    # Step 2: Build dedup keys
+    # Step 2: Domain validation — catch parser bugs before indexing
+    failed = 0
+    for c in chunks:
+        try:
+            validate_domain_chunk(c.model_dump())
+        except (ValueError, Exception) as exc:
+            failed += 1
+            logger.warning("Domain validation failed for %s/%s: %s", c.kind, c.domain_key, exc)
+    if failed:
+        logger.warning("%d / %d chunks failed domain validation", failed, len(chunks))
+    else:
+        logger.info("All %d chunks passed domain validation", len(chunks))
+
+    # Step 3: Build dedup keys
     dedup_keys = [parser.dedup_key(c) for c in chunks]
 
     # Step 3: Embed + upsert

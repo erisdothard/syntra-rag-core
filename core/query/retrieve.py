@@ -20,6 +20,7 @@ import anthropic
 
 from core.db import get_supabase
 from core.ingestion.index import embed_texts
+from core.trust.validate import validate_retrieval
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,14 @@ async def retrieve(
             model=rerank_model,
         )
         logger.info("Reranked to %d results", len(candidates))
+
+    # Validate retrieval result (cheap Pydantic check)
+    total_candidates = top_k  # pre-rerank count
+    validate_retrieval(
+        query=query,
+        chunks=candidates,
+        total_candidates=total_candidates,
+    )
 
     return candidates
 

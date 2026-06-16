@@ -24,6 +24,7 @@ from pydantic import BaseModel
 
 from core.db import get_supabase
 from core.interfaces import Chunk
+from core.trust.validate import validate_chunk
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +134,18 @@ async def index_chunks(
         raise ValueError(
             f"chunks ({len(chunks)}) and dedup_keys ({len(dedup_keys)}) must be same length"
         )
+
+    # Validate every chunk before embedding (cheap Pydantic check)
+    for chunk, dedup_key in zip(chunks, dedup_keys):
+        validate_chunk(
+            domain_key=chunk.domain_key,
+            kind=chunk.kind,
+            variant=chunk.variant,
+            content=chunk.content,
+            metadata=chunk.metadata,
+            dedup_key=dedup_key,
+        )
+    logger.info("Validated %d chunks", len(chunks))
 
     logger.info("Embedding %d chunks with %s", len(chunks), embed_model)
     texts = [c.content for c in chunks]

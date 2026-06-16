@@ -26,7 +26,7 @@ and a corpus sanity check.
 - [x] `ARCHITECTURE.md` — ASCII architecture diagram
 - [x] `DATA_SHAPE.md` — Synthea data shape reference
 - [x] **Update `ARCHITECTURE.md` build-order table** — mark all 10 steps as "done"
-- [ ] **Initialize git repo** — `git init`, initial commit with all existing code
+- [x] **Initialize git repo** — `git init`, initial commit with all existing code
 - [x] **Fix declared dependencies** — add `httpx` and `python-dotenv` to `pyproject.toml`
 - [x] **Rename `clients/fhir-mapping/` → `clients/fhir_mapping/`** — hyphens in Python package names are non-standard, break normal imports, require `importlib` workarounds. Update all references in `scripts/ingest.py`, `config.yaml`, etc. Updated Supabase rows (1,450) from `fhir-mapping` → `fhir_mapping`.
 - [x] **Create `db/migrations/001_init.sql`** — the `chunks` table DDL + `hybrid_search` RPC function as a runnable SQL file (not just in docstrings)
@@ -43,10 +43,10 @@ and a corpus sanity check.
 Code that exists but is never called. This is the gap between "I wrote it"
 and "the system uses it." No new code — just connecting what's already there.
 
-- [ ] **Wire `validate_chunk()`** into `core/ingestion/chunk.py` or `core/ingestion/index.py` — every chunk gets validated before indexing
-- [ ] **Wire `validate_retrieval()`** into `core/query/retrieve.py` or `core/query/orchestrate.py` — every retrieval result gets validated before generation
-- [ ] **Wire `validate_domain_chunk()`** from `clients/fhir_mapping/schema.py` into the client's ingestion flow — domain-specific shape validation before indexing
-- [ ] **Create `scripts/regression.py`** — a runnable script that invokes `core/trust/evals/regression/run.py` against the configured client
+- [x] **Wire `validate_chunk()`** into `core/ingestion/index.py` — every chunk validated before embedding
+- [x] **Wire `validate_retrieval()`** into `core/query/retrieve.py` — every retrieval result validated before returning
+- [x] **Wire `validate_domain_chunk()`** from `clients/fhir_mapping/schema.py` into `scripts/ingest.py` — domain-specific shape validation before indexing
+- [x] **Create `scripts/regression.py`** — runnable script invoking `core/trust/evals/regression/run.py`
 
 **Gate:** Re-run ingestion — chunks pass both core and domain validation. Re-run an e2e query — retrieval result is validated. `grep -r "validate_chunk\|validate_retrieval\|validate_domain_chunk" core/ clients/` shows real call sites, not just definitions.
 
