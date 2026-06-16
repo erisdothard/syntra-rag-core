@@ -8,14 +8,19 @@ Handles:
   - valueQuantity (numeric results)
   - valueCodeableConcept (coded results)
   - component[] panels (e.g. Blood Pressure — no top-level value)
-- Condition (secondary): SNOMED-coded diagnoses
+- Condition: SNOMED-coded diagnoses
 - Patient: PID-equivalent demographics
+- MedicationRequest: prescribed medications (RxNorm)
+- Procedure: surgical/clinical procedures (SNOMED)
+- Immunization: vaccine records (CVX)
+- DiagnosticReport: lab/imaging panel summaries (LOINC)
+- Encounter: visit/admission records (SNOMED)
 
 Files can be 40MB+. Uses ijson for streaming when available,
 falls back to chunked stdlib json parsing.
 
-Dedup strategy: LOINC/SNOMED code + value[x] variant. One canonical
-example per distinct shape — not one chunk per reading.
+Dedup strategy: code + variant (or kind for non-Observation types).
+One canonical example per distinct shape — not one chunk per reading.
 """
 
 from __future__ import annotations
@@ -30,12 +35,20 @@ from core.interfaces import Chunk
 logger = logging.getLogger(__name__)
 
 # Resource types we extract. Everything else is skipped.
-_TARGET_TYPES = frozenset({"Observation", "Condition", "Patient"})
+_TARGET_TYPES = frozenset({
+    "Observation", "Condition", "Patient",
+    "MedicationRequest", "Procedure", "Immunization",
+    "DiagnosticReport", "Encounter",
+})
 
 # Code system URLs → short labels
 _SYSTEM_LABELS = {
     "http://loinc.org": "LOINC",
     "http://snomed.info/sct": "SNOMED",
+    "http://www.nlm.nih.gov/research/umls/rxnorm": "RxNorm",
+    "http://hl7.org/fhir/sid/cvx": "CVX",
+    "http://terminology.hl7.org/CodeSystem/v3-ActCode": "ActCode",
+    "http://terminology.hl7.org/CodeSystem/v2-0074": "HL7v2",
 }
 
 
@@ -76,7 +89,11 @@ class FHIRParser:
 
         For Observations this collapses thousands of identical Body Height
         readings into one canonical example per LOINC code + value[x] shape.
+        For Patients, dedup by kind alone — one example is enough to
+        demonstrate the resource shape.
         """
+        if chunk.kind == "Patient":
+            return "Patient|canonical"
         return f"{chunk.domain_key or 'none'}|{chunk.variant or 'none'}"
 
 
@@ -100,13 +117,10 @@ def _load_bundle(path: Path) -> dict | None:
 
 def _resource_to_chunk(resource: dict, rtype: str) -> Chunk | None:
     """Dispatch to the right extractor by resource type."""
-    if rtype == "Observation":
-        return _observation_to_chunk(resource)
-    if rtype == "Condition":
-        return _condition_to_chunk(resource)
-    if rtype == "Patient":
-        return _patient_to_chunk(resource)
-    return None
+    extractor = _EXTRACTORS.get(rtype)
+    if extractor is None:
+        return None
+    return extractor(resource)
 
 
 # -- Observation -------------------------------------------------------------
@@ -344,3 +358,262 @@ def _nested_code(codeable: dict) -> str:
         if code:
             return code
     return "unknown"
+
+
+# -- MedicationRequest -------------------------------------------------------
+
+
+def _medication_request_to_chunk(med: dict) -> Chunk | None:
+    """Convert a FHIR MedicationRequest to a Chunk."""
+    med_concept = med.get("medicationCodeableConcept", {})
+    code_info = _extract_primary_code(med_concept)
+    if code_info is None:
+        return None
+
+    code_value, code_display, code_system = code_info
+    status = med.get("status", "unknown")
+    intent = med.get("intent", "unknown")
+    authored = med.get("authoredOn", "")
+
+    content_lines = [
+        "Resource: MedicationRequest",
+        f"Code: {code_value} ({code_display})",
+        f"System: {code_system}",
+        f"Status: {status}",
+        f"Intent: {intent}",
+    ]
+
+    if authored:
+        content_lines.append(f"Authored: {authored}")
+
+    # Dosage instructions
+    dosages = med.get("dosageInstruction", [])
+    if dosages:
+        d = dosages[0]
+        if d.get("asNeededBoolean"):
+            content_lines.append("Dosage: as needed")
+        timing = d.get("timing", {}).get("repeat", {})
+        if timing:
+            freq = timing.get("frequency", "")
+            period = timing.get("period", "")
+            period_unit = timing.get("periodUnit", "")
+            if freq:
+                content_lines.append(f"Dosage: {freq}x per {period} {period_unit}".strip())
+
+    requester = med.get("requester", {}).get("display", "")
+    if requester:
+        content_lines.append(f"Requester: {requester}")
+
+    return Chunk(
+        domain_key=code_value,
+        kind="MedicationRequest",
+        variant=None,
+        content="\n".join(content_lines),
+        metadata={
+            "code_system": code_system,
+            "code_display": code_display,
+            "status": status,
+            "intent": intent,
+        },
+    )
+
+
+# -- Procedure ---------------------------------------------------------------
+
+
+def _procedure_to_chunk(proc: dict) -> Chunk | None:
+    """Convert a FHIR Procedure to a Chunk."""
+    code_info = _extract_primary_code(proc.get("code", {}))
+    if code_info is None:
+        return None
+
+    code_value, code_display, code_system = code_info
+    status = proc.get("status", "unknown")
+
+    content_lines = [
+        "Resource: Procedure",
+        f"Code: {code_value} ({code_display})",
+        f"System: {code_system}",
+        f"Status: {status}",
+    ]
+
+    period = proc.get("performedPeriod", {})
+    if period:
+        start = period.get("start", "")
+        end = period.get("end", "")
+        if start:
+            content_lines.append(f"Performed start: {start}")
+        if end:
+            content_lines.append(f"Performed end: {end}")
+    elif proc.get("performedDateTime"):
+        content_lines.append(f"Performed: {proc['performedDateTime']}")
+
+    return Chunk(
+        domain_key=code_value,
+        kind="Procedure",
+        variant=None,
+        content="\n".join(content_lines),
+        metadata={
+            "code_system": code_system,
+            "code_display": code_display,
+            "status": status,
+        },
+    )
+
+
+# -- Immunization ------------------------------------------------------------
+
+
+def _immunization_to_chunk(imm: dict) -> Chunk | None:
+    """Convert a FHIR Immunization to a Chunk."""
+    code_info = _extract_primary_code(imm.get("vaccineCode", {}))
+    if code_info is None:
+        return None
+
+    code_value, code_display, code_system = code_info
+    status = imm.get("status", "unknown")
+    occurrence = imm.get("occurrenceDateTime", "")
+
+    content_lines = [
+        "Resource: Immunization",
+        f"Vaccine code: {code_value} ({code_display})",
+        f"System: {code_system}",
+        f"Status: {status}",
+    ]
+
+    if occurrence:
+        content_lines.append(f"Date: {occurrence}")
+
+    primary_source = imm.get("primarySource")
+    if primary_source is not None:
+        content_lines.append(f"Primary source: {primary_source}")
+
+    return Chunk(
+        domain_key=code_value,
+        kind="Immunization",
+        variant=None,
+        content="\n".join(content_lines),
+        metadata={
+            "code_system": code_system,
+            "code_display": code_display,
+            "status": status,
+        },
+    )
+
+
+# -- DiagnosticReport -------------------------------------------------------
+
+
+def _diagnostic_report_to_chunk(report: dict) -> Chunk | None:
+    """Convert a FHIR DiagnosticReport to a Chunk."""
+    code_info = _extract_primary_code(report.get("code", {}))
+    if code_info is None:
+        return None
+
+    code_value, code_display, code_system = code_info
+    status = report.get("status", "unknown")
+    category = "unknown"
+    for cat in report.get("category", []):
+        for coding in cat.get("coding", []):
+            if coding.get("display"):
+                category = coding["display"]
+                break
+
+    content_lines = [
+        "Resource: DiagnosticReport",
+        f"Code: {code_value} ({code_display})",
+        f"System: {code_system}",
+        f"Category: {category}",
+        f"Status: {status}",
+    ]
+
+    effective = report.get("effectiveDateTime")
+    if effective:
+        content_lines.append(f"Effective: {effective}")
+
+    # List result references
+    results = report.get("result", [])
+    if results:
+        result_names = [r.get("display", "unknown") for r in results]
+        content_lines.append(f"Results ({len(results)}): {', '.join(result_names)}")
+
+    return Chunk(
+        domain_key=code_value,
+        kind="DiagnosticReport",
+        variant=None,
+        content="\n".join(content_lines),
+        metadata={
+            "code_system": code_system,
+            "code_display": code_display,
+            "category": category,
+            "status": status,
+            "result_count": len(results),
+        },
+    )
+
+
+# -- Encounter ---------------------------------------------------------------
+
+
+def _encounter_to_chunk(enc: dict) -> Chunk | None:
+    """Convert a FHIR Encounter to a Chunk."""
+    # Encounter type is the primary code (e.g. "Cardiac Arrest", "Checkup")
+    types = enc.get("type", [])
+    if not types:
+        return None
+
+    code_info = _extract_primary_code(types[0])
+    if code_info is None:
+        return None
+
+    code_value, code_display, code_system = code_info
+    status = enc.get("status", "unknown")
+
+    # Encounter class (AMB, EMER, IMP, etc.)
+    enc_class = enc.get("class", {})
+    class_code = enc_class.get("code", "unknown")
+
+    content_lines = [
+        "Resource: Encounter",
+        f"Type: {code_value} ({code_display})",
+        f"System: {code_system}",
+        f"Class: {class_code}",
+        f"Status: {status}",
+    ]
+
+    period = enc.get("period", {})
+    if period.get("start"):
+        content_lines.append(f"Start: {period['start']}")
+    if period.get("end"):
+        content_lines.append(f"End: {period['end']}")
+
+    provider = enc.get("serviceProvider", {}).get("display", "")
+    if provider:
+        content_lines.append(f"Provider: {provider}")
+
+    return Chunk(
+        domain_key=code_value,
+        kind="Encounter",
+        variant=class_code,
+        content="\n".join(content_lines),
+        metadata={
+            "code_system": code_system,
+            "code_display": code_display,
+            "class": class_code,
+            "status": status,
+        },
+    )
+
+
+# -- Extractor dispatch table ------------------------------------------------
+
+_EXTRACTORS = {
+    "Observation": _observation_to_chunk,
+    "Condition": _condition_to_chunk,
+    "Patient": _patient_to_chunk,
+    "MedicationRequest": _medication_request_to_chunk,
+    "Procedure": _procedure_to_chunk,
+    "Immunization": _immunization_to_chunk,
+    "DiagnosticReport": _diagnostic_report_to_chunk,
+    "Encounter": _encounter_to_chunk,
+}

@@ -3,7 +3,7 @@
 
 client:
   name: "fhir_mapping"
-  description: "HL7 v2 OBX → FHIR R4 Observation mapping assistant"
+  description: "HL7 v2 → FHIR R4 mapping assistant (Observations, Conditions, Medications, Procedures, Immunizations, Encounters, Diagnostic Reports)"
 
 data:
   source_dir: ""  # path to extracted Synthea fhir/ directory
@@ -11,6 +11,11 @@ data:
     - Observation
     - Condition
     - Patient
+    - MedicationRequest
+    - Procedure
+    - Immunization
+    - DiagnosticReport
+    - Encounter
   primary_target: "Observation"
 
 code_systems:
@@ -23,6 +28,12 @@ code_systems:
   ucum:
     system_url: "http://unitsofmeasure.org"
     display_name: "UCUM"
+  rxnorm:
+    system_url: "http://www.nlm.nih.gov/research/umls/rxnorm"
+    display_name: "RxNorm"
+  cvx:
+    system_url: "http://hl7.org/fhir/sid/cvx"
+    display_name: "CVX"
 
 chunking:
   dedup_keys:
@@ -64,6 +75,18 @@ reshape:
     - "component"
     - "OBX segment"
     - "HL7 v2"
+    - "MedicationRequest"
+    - "RxNorm"
+    - "RXE segment"
+    - "Procedure"
+    - "SNOMED"
+    - "PR1 segment"
+    - "Immunization"
+    - "CVX"
+    - "RXA segment"
+    - "DiagnosticReport"
+    - "Encounter"
+    - "PV1 segment"
 
 eval:
   gold_sets_dir: "clients/fhir_mapping/gold_sets"

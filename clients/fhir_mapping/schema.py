@@ -7,6 +7,11 @@ These extend the core's generic validation with domain rules:
 - Observation chunks MUST have a LOINC code and a recognized value[x] variant
 - Condition chunks MUST have a SNOMED code
 - Patient chunks MUST have an ID
+- MedicationRequest chunks MUST have an RxNorm code
+- Procedure chunks MUST have a SNOMED code
+- Immunization chunks MUST have a CVX code
+- DiagnosticReport chunks MUST have a LOINC code
+- Encounter chunks MUST have a SNOMED code
 
 The core validates structure. This file validates domain correctness.
 """
@@ -21,7 +26,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 _VALID_VARIANTS = frozenset({"valueQuantity", "valueCodeableConcept", "component", "none"})
 
 # Known code systems this client expects
-_KNOWN_SYSTEMS = frozenset({"LOINC", "SNOMED"})
+_KNOWN_SYSTEMS = frozenset({"LOINC", "SNOMED", "RxNorm", "CVX", "ActCode", "HL7v2"})
 
 
 class ObservationChunkSchema(BaseModel):
@@ -109,6 +114,103 @@ class PatientMetadata(BaseModel):
     birth_date: str
 
 
+# -- MedicationRequest -------------------------------------------------------
+
+
+class CodedMetadata(BaseModel):
+    """Common metadata for code-based resource chunks."""
+
+    code_system: str
+    code_display: str
+    status: str
+
+
+class MedicationRequestMetadata(CodedMetadata):
+    """Expected metadata shape for MedicationRequest chunks."""
+
+    intent: str
+
+
+class MedicationRequestChunkSchema(BaseModel):
+    """Domain validation for a MedicationRequest chunk."""
+
+    domain_key: str = Field(description="RxNorm code")
+    kind: Literal["MedicationRequest"]
+    variant: None = None
+    content: str
+    metadata: MedicationRequestMetadata
+
+
+# -- Procedure ---------------------------------------------------------------
+
+
+class ProcedureChunkSchema(BaseModel):
+    """Domain validation for a Procedure chunk."""
+
+    domain_key: str = Field(description="SNOMED code")
+    kind: Literal["Procedure"]
+    variant: None = None
+    content: str
+    metadata: CodedMetadata
+
+
+# -- Immunization ------------------------------------------------------------
+
+
+class ImmunizationChunkSchema(BaseModel):
+    """Domain validation for an Immunization chunk."""
+
+    domain_key: str = Field(description="CVX code")
+    kind: Literal["Immunization"]
+    variant: None = None
+    content: str
+    metadata: CodedMetadata
+
+
+# -- DiagnosticReport -------------------------------------------------------
+
+
+class DiagnosticReportMetadata(BaseModel):
+    """Expected metadata shape for DiagnosticReport chunks."""
+
+    code_system: str
+    code_display: str
+    category: str
+    status: str
+    result_count: int
+
+
+class DiagnosticReportChunkSchema(BaseModel):
+    """Domain validation for a DiagnosticReport chunk."""
+
+    domain_key: str = Field(description="LOINC code")
+    kind: Literal["DiagnosticReport"]
+    variant: None = None
+    content: str
+    metadata: DiagnosticReportMetadata
+
+
+# -- Encounter ---------------------------------------------------------------
+
+
+class EncounterMetadata(BaseModel):
+    """Expected metadata shape for Encounter chunks."""
+
+    code_system: str
+    code_display: str
+    status: str
+
+
+class EncounterChunkSchema(BaseModel):
+    """Domain validation for an Encounter chunk."""
+
+    domain_key: str = Field(description="SNOMED code")
+    kind: Literal["Encounter"]
+    variant: str | None = None
+    content: str
+    metadata: EncounterMetadata
+
+
 # ---------------------------------------------------------------------------
 # Dispatch — validate a chunk dict against the right domain schema
 # ---------------------------------------------------------------------------
@@ -117,6 +219,11 @@ _SCHEMA_MAP = {
     "Observation": ObservationChunkSchema,
     "Condition": ConditionChunkSchema,
     "Patient": PatientChunkSchema,
+    "MedicationRequest": MedicationRequestChunkSchema,
+    "Procedure": ProcedureChunkSchema,
+    "Immunization": ImmunizationChunkSchema,
+    "DiagnosticReport": DiagnosticReportChunkSchema,
+    "Encounter": EncounterChunkSchema,
 }
 
 
