@@ -1,0 +1,27 @@
+[
+    {
+        "question": "How do I map an OBX segment for body height to a FHIR Observation?",
+        "expected_substrings": ["8302-2", "Body Height", "valueQuantity", "cm"],
+        "blocked_substrings": []
+    },
+    {
+        "question": "How do I map blood pressure with systolic and diastolic components to a FHIR Observation?",
+        "expected_substrings": ["55284-4", "component", "systolic", "diastolic"],
+        "blocked_substrings": []
+    },
+    {
+        "question": "How do I represent smoking status in a FHIR Observation using valueCodeableConcept?",
+        "expected_substrings": ["72166-2", "valueCodeableConcept", "smoking"],
+        "blocked_substrings": []
+    },
+    {
+        "question": "How do I represent Atrial Fibrillation as a FHIR Condition using SNOMED?",
+        "expected_substrings": ["49436004", "SNOMED", "Atrial Fibrillation"],
+        "blocked_substrings": []
+    },
+    {
+        "question": "How do I map a Medication resource for aspirin to FHIR?",
+        "expected_substrings": [],
+        "blocked_substrings": ["Based on Evidence [1]"]
+    }
+]

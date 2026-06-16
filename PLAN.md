@@ -62,11 +62,11 @@ This phase runs parallel with Phase 3 (unit tests). Start here.
 
 ### 2a — Critical gold cases (4 minimum, covering the hard variants)
 
-- [ ] **Gold case: valueQuantity** — body height (LOINC 8302-2). Already have one happy-path result. Formalize it.
-- [ ] **Gold case: component[] panel** — blood pressure (LOINC 85354-9). Systolic + diastolic components. This is the variant most likely to break.
-- [ ] **Gold case: valueCodeableConcept** — e.g. smoking status. Tests non-numeric value mapping.
-- [ ] **Gold case: Condition (SNOMED routing)** — e.g. "How do I represent Cardiac Arrest in FHIR?" Tests that the retriever finds Conditions, not just Observations.
-- [ ] **Gold case: should-refuse** — a question the corpus cannot answer (e.g. a Medication question when no Medication resources are indexed). Should trigger `no_evidence` route with an honest "I don't know."
+- [x] **Gold case: valueQuantity** — body height (LOINC 8302-2). f=5/5, r=5/5. PASS.
+- [x] **Gold case: component[] panel** — blood pressure (LOINC 55284-4). f=2/5, r=5/5. FAIL — answer adds OBX structure detail not in evidence. Product break found.
+- [x] **Gold case: valueCodeableConcept** — smoking status (LOINC 72166-2). f=4/5, r=5/5. PASS.
+- [x] **Gold case: Condition (SNOMED routing)** — Atrial Fibrillation (SNOMED 49436004). f=4/5, r=5/5. PASS.
+- [x] **Gold case: should-refuse** — Medication/aspirin. f=1/5, r=5/5. CORRECTLY FAILED — but route was `direct` not `no_evidence`. Model hallucinated a medication guide from Condition evidence. Retriever returned irrelevant chunks instead of nothing.
 
 ### 2b — Explain the faithfulness 4/5
 
