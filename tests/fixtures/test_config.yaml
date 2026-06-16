@@ -1,0 +1,27 @@
+client:
+  name: "test_client"
+  description: "Test client for unit tests"
+
+retrieval:
+  top_k: 5
+  rerank: true
+  rerank_top_k: 3
+
+generation:
+  model: "claude-sonnet-4-6"
+  max_tokens: 2048
+  temperature: 0.0
+
+judging:
+  model: "claude-haiku-4-5-20251001"
+  faithfulness:
+    threshold: 3
+  relevance:
+    threshold: 3
+
+reshape:
+  model: "claude-haiku-4-5-20251001"
+  vocabulary_hints:
+    - "term_a"
+    - "term_b"
+    - "term_c"

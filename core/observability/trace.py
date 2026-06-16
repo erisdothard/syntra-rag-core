@@ -229,7 +229,8 @@ def _serialize(trace: Trace) -> dict[str, Any]:
 
 def get_recent_traces(limit: int = 20) -> list[dict[str, Any]]:
     """Return the most recent traces from the ring buffer."""
-    return list(reversed(_TRACE_BUFFER[-limit:]))
+    items = list(_TRACE_BUFFER)
+    return list(reversed(items[-limit:]))
 
 
 def get_trace(trace_id: str) -> dict[str, Any] | None:
@@ -243,4 +244,4 @@ def get_trace(trace_id: str) -> dict[str, Any] | None:
 def get_flagged_traces(limit: int = 20) -> list[dict[str, Any]]:
     """Return recent traces where the judge flagged the answer."""
     flagged = [t for t in _TRACE_BUFFER if t.get("flagged")]
-    return list(reversed(flagged[-limit:]))
+    return list(reversed(flagged[-limit:]))  # flagged is already a list, slicing is safe
