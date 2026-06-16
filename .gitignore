@@ -14,3 +14,9 @@ build/
 # Data files (large)
 data/
 *.json.gz
+
+# Frontend
+node_modules/
+.next/
+web/.next/
+web/node_modules/

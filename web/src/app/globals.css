@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+:root {
+  --bg-base: oklch(12% 0.02 260);
+  --bg-surface: oklch(15% 0.015 260);
+  --text-primary: oklch(92% 0.01 260);
+  --text-secondary: oklch(65% 0.01 260);
+  --accent: oklch(68% 0.18 230);
+  --accent-glow: oklch(68% 0.18 230 / 0.15);
+}
+
+@theme inline {
+  --color-background: var(--bg-base);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(30% 0.01 260) transparent;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans, "Inter", system-ui, -apple-system, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typing cursor animation */
+@keyframes pulse-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Smooth scrollbar for message area */
+.chat-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: oklch(30% 0.01 260);
+  border-radius: 2px;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: oklch(40% 0.01 260);
+}
