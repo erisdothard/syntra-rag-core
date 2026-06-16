@@ -16,9 +16,8 @@ import logging
 import os
 from typing import Any
 
-import anthropic
-
 from core.db import get_supabase
+from core.llm import get_anthropic
 from core.ingestion.index import embed_texts
 from core.trust.validate import validate_retrieval
 
@@ -201,7 +200,7 @@ async def _rerank(
         + "\n\n".join(numbered)
     )
 
-    client = anthropic.AsyncAnthropic()
+    client = get_anthropic()
 
     try:
         response = await client.messages.create(
@@ -213,7 +212,7 @@ async def _rerank(
         raw = response.content[0].text
         ranking = _parse_ranking(raw, len(candidates))
     except Exception:
-        logger.exception("Rerank failed — returning original order")
+        logger.warning("Rerank failed — returning original order", exc_info=True)
         ranking = list(range(len(candidates)))
 
     # Reorder and assign new scores

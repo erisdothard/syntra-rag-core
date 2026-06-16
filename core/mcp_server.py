@@ -43,19 +43,25 @@ mcp = FastMCP(
 _CONFIG_PATH: str = os.environ.get("RAG_CLIENT_CONFIG", "")
 
 
-def _get_client_name() -> str:
-    """Read the client name from config for tracing."""
-    import yaml
+_cached_client_name: str | None = None
 
-    config_path = Path(_CONFIG_PATH)
-    yaml_path = (
-        config_path
-        if config_path.suffix in (".yaml", ".yml")
-        else config_path / "config.yaml"
-    )
-    with open(yaml_path, "r", encoding="utf-8") as f:
-        config = yaml.safe_load(f)
-    return config.get("client", {}).get("name", "unknown")
+
+def _get_client_name() -> str:
+    """Read the client name from config for tracing (cached after first read)."""
+    global _cached_client_name
+    if _cached_client_name is None:
+        import yaml
+
+        config_path = Path(_CONFIG_PATH)
+        yaml_path = (
+            config_path
+            if config_path.suffix in (".yaml", ".yml")
+            else config_path / "config.yaml"
+        )
+        with open(yaml_path, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+        _cached_client_name = config.get("client", {}).get("name", "unknown")
+    return _cached_client_name
 
 
 # ---------------------------------------------------------------------------

@@ -17,6 +17,7 @@ Build order: Step 9.
 
 from __future__ import annotations
 
+import collections
 import json
 import logging
 import time
@@ -28,9 +29,8 @@ from core.query.orchestrate import OrchestratorResult
 
 logger = logging.getLogger(__name__)
 
-# In-memory ring buffer for recent traces (MCP introspection)
-_TRACE_BUFFER: list[dict[str, Any]] = []
-_BUFFER_MAX = 200
+# Thread-safe ring buffer for recent traces (MCP introspection)
+_TRACE_BUFFER: collections.deque[dict[str, Any]] = collections.deque(maxlen=200)
 
 
 @dataclass
@@ -80,6 +80,7 @@ def trace_result(
     now = time.time()
     trace_id = uuid.uuid4().hex[:12]
 
+    timing = result.timing
     events: list[TraceEvent] = []
 
     # Reshape event
@@ -87,7 +88,7 @@ def trace_result(
     events.append(TraceEvent(
         stage="reshape",
         timestamp=start_time,
-        duration_ms=0.0,  # reshape timing not captured individually — see note below
+        duration_ms=timing.reshape_ms,
         data={
             "original": reshaped.original,
             "rewritten": reshaped.rewritten,
@@ -102,7 +103,7 @@ def trace_result(
     events.append(TraceEvent(
         stage="retrieve",
         timestamp=start_time,
-        duration_ms=0.0,
+        duration_ms=timing.retrieve_ms,
         data={
             "chunks_returned": len(chunks_used),
             "chunk_kinds": list({c.kind for c in chunks_used}),
@@ -122,7 +123,7 @@ def trace_result(
     events.append(TraceEvent(
         stage="generate",
         timestamp=start_time,
-        duration_ms=0.0,
+        duration_ms=timing.generate_ms,
         data={
             "model": gen.model,
             "answer_length": len(gen.answer),
@@ -148,7 +149,7 @@ def trace_result(
         events.append(TraceEvent(
             stage="judge",
             timestamp=start_time,
-            duration_ms=0.0,
+            duration_ms=timing.judge_ms,
             data={
                 "faithfulness_score": jr.faithfulness.score,
                 "faithfulness_reasoning": jr.faithfulness.reasoning,
@@ -194,10 +195,8 @@ def _emit(trace: Trace) -> None:
     )
     logger.debug("TRACE_DETAIL %s", json.dumps(record))
 
-    # Ring buffer for introspection
+    # Ring buffer for introspection (deque handles max size automatically)
     _TRACE_BUFFER.append(record)
-    if len(_TRACE_BUFFER) > _BUFFER_MAX:
-        _TRACE_BUFFER.pop(0)
 
 
 def _serialize(trace: Trace) -> dict[str, Any]:

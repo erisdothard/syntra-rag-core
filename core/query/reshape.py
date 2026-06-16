@@ -20,7 +20,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-import anthropic
+from core.llm import get_anthropic
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ async def reshape(
         question=question,
     )
 
-    client = anthropic.AsyncAnthropic()
+    client = get_anthropic()
 
     try:
         response = await client.messages.create(

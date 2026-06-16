@@ -13,10 +13,10 @@ Build order: Step 8.
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
 from typing import Any
 
-import anthropic
-
+from core.llm import get_anthropic
 from core.trust.validate import (
     GenerationResult,
     RetrievedChunk,
@@ -25,6 +25,35 @@ from core.trust.validate import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+async def generate_stream(
+    *,
+    query: str,
+    chunks: list[dict[str, Any]],
+    system_prompt: str,
+    model: str = "claude-sonnet-4-6",
+    max_tokens: int = 2048,
+    temperature: float = 0.0,
+) -> AsyncIterator[str]:
+    """Stream an answer token-by-token. Used by the chat UI.
+
+    Yields text deltas as they arrive. Does NOT validate (caller
+    should collect the full text and validate after streaming completes).
+    """
+    evidence_block = _format_evidence(chunks)
+    user_message = f"Evidence:\n\n{evidence_block}\n\n---\n\nQuestion: {query}"
+    client = get_anthropic()
+
+    async with client.messages.stream(
+        model=model,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_message}],
+    ) as stream:
+        async for text in stream.text_stream:
+            yield text
 
 
 async def generate(
@@ -59,7 +88,7 @@ async def generate(
         f"Question: {query}"
     )
 
-    client = anthropic.AsyncAnthropic()
+    client = get_anthropic()
 
     response = await client.messages.create(
         model=model,

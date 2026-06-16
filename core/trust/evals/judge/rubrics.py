@@ -15,11 +15,12 @@ Build order: Step 5.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from typing import Any
 
-import anthropic
+from core.llm import get_anthropic
 
 logger = logging.getLogger(__name__)
 
@@ -106,24 +107,26 @@ async def judge(
     """
     evidence_text = "\n---\n".join(evidence_chunks)
 
-    faithfulness = await _score_rubric(
-        rubric_template=_FAITHFULNESS_RUBRIC,
-        dimension="faithfulness",
-        question=question,
-        answer=answer,
-        evidence=evidence_text,
-        model=model,
-        threshold=faithfulness_threshold,
-    )
-
-    relevance = await _score_rubric(
-        rubric_template=_RELEVANCE_RUBRIC,
-        dimension="relevance",
-        question=question,
-        answer=answer,
-        evidence="",  # relevance doesn't need evidence
-        model=model,
-        threshold=relevance_threshold,
+    # Run both rubrics in parallel — they're independent
+    faithfulness, relevance = await asyncio.gather(
+        _score_rubric(
+            rubric_template=_FAITHFULNESS_RUBRIC,
+            dimension="faithfulness",
+            question=question,
+            answer=answer,
+            evidence=evidence_text,
+            model=model,
+            threshold=faithfulness_threshold,
+        ),
+        _score_rubric(
+            rubric_template=_RELEVANCE_RUBRIC,
+            dimension="relevance",
+            question=question,
+            answer=answer,
+            evidence="",  # relevance doesn't need evidence
+            model=model,
+            threshold=relevance_threshold,
+        ),
     )
 
     return JudgeResult(
@@ -150,7 +153,7 @@ async def _score_rubric(
         evidence=evidence,
     )
 
-    client = anthropic.AsyncAnthropic()
+    client = get_anthropic()
 
     try:
         response = await client.messages.create(
