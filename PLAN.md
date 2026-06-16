@@ -73,9 +73,9 @@ This phase runs parallel with Phase 3 (unit tests). Start here.
 The one real result we have scored faithfulness=4/5. Before building a calibration
 harness, read the trace and explain why it lost a point.
 
-- [ ] **Read the full trace** of the body-height query result — what evidence was cited, what the answer said, what the judge's reasoning was
-- [ ] **Determine: strict-and-right or strict-and-noisy?** — did the judge correctly identify a gap (e.g. the answer added info not in evidence), or is the rubric too harsh? This informs whether to adjust the rubric before calibrating against it.
-- [ ] **Document the finding** in `clients/fhir_mapping/gold_sets/JUDGE_NOTES.md`
+- [x] **Read the full trace** — compared f=5 (body height) vs f=2 (blood pressure) side by side. Identified exactly which claims in the BP answer have no evidence backing.
+- [x] **Determine: strict-and-right or strict-and-noisy?** — **Strict-and-right.** Judge correctly flags that LOINC 8480-6/8462-4 (component codes) are not in the evidence. The chunk content lacks structured component data because `_slim_observation()` strips it to text.
+- [x] **Document the finding** in `clients/fhir_mapping/gold_sets/JUDGE_NOTES.md` — full analysis with root causes and fix recommendations for both BP and medication failures.
 
 ### 2c — Expand to full gold set
 
