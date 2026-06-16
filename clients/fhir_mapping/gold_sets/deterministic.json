@@ -23,5 +23,35 @@
         "question": "How do I map a Medication resource for aspirin to FHIR?",
         "expected_substrings": [],
         "blocked_substrings": ["Based on Evidence [1]"]
+    },
+    {
+        "question": "How do I map BMI (Body Mass Index) measurements to a FHIR Observation using valueQuantity?",
+        "expected_substrings": ["39156-5", "Body Mass Index", "valueQuantity", "kg/m2"],
+        "blocked_substrings": []
+    },
+    {
+        "question": "How do I map PID segment patient demographics to a FHIR Patient resource?",
+        "expected_substrings": ["Patient", "gender", "birth"],
+        "blocked_substrings": []
+    },
+    {
+        "question": "How do I represent Hypertension as a FHIR Condition using SNOMED coding?",
+        "expected_substrings": ["59621000", "SNOMED", "Hypertension", "Condition"],
+        "blocked_substrings": []
+    },
+    {
+        "question": "How do I map a hemoglobin lab result to a FHIR Observation?",
+        "expected_substrings": ["718-7", "Hemoglobin", "valueQuantity", "g/dL"],
+        "blocked_substrings": []
+    },
+    {
+        "question": "How do I represent an Observation that has no value in FHIR?",
+        "expected_substrings": ["none", "Observation", "no value"],
+        "blocked_substrings": []
+    },
+    {
+        "question": "What resources does FHIR use to represent a patient diagnosed with diabetes including their lab results?",
+        "expected_substrings": ["Patient", "Condition", "Observation"],
+        "blocked_substrings": []
     }
 ]

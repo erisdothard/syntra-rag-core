@@ -1,0 +1,7 @@
+{
+  "question": "How do I map BMI (Body Mass Index) measurements to a FHIR Observation using valueQuantity?",
+  "answer": "",
+  "evidence_chunks": [],
+  "human_faithfulness": 0,
+  "human_relevance": 0
+}
