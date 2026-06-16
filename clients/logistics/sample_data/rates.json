@@ -1,0 +1,56 @@
+[
+  {
+    "type": "rate",
+    "lane_id": "LANE-ATL-CHI-001",
+    "origin": "Atlanta, GA",
+    "destination": "Chicago, IL",
+    "rate_per_mile": 2.85,
+    "flat_rate": 1950.00,
+    "equipment_type": "Dry Van",
+    "transit_days": 2,
+    "min_weight": 10000
+  },
+  {
+    "type": "rate",
+    "lane_id": "LANE-CHI-DAL-001",
+    "origin": "Chicago, IL",
+    "destination": "Dallas, TX",
+    "rate_per_mile": 2.65,
+    "flat_rate": 2400.00,
+    "equipment_type": "Dry Van",
+    "transit_days": 3,
+    "min_weight": 15000
+  },
+  {
+    "type": "rate",
+    "lane_id": "LANE-LAX-SEA-001",
+    "origin": "Los Angeles, CA",
+    "destination": "Seattle, WA",
+    "rate_per_mile": 3.10,
+    "flat_rate": 3500.00,
+    "equipment_type": "Reefer",
+    "transit_days": 2,
+    "min_weight": 20000
+  },
+  {
+    "type": "rate",
+    "lane_id": "LANE-ATL-CHI-002",
+    "origin": "Atlanta, GA",
+    "destination": "Chicago, IL",
+    "rate_per_mile": 3.50,
+    "flat_rate": 2200.00,
+    "equipment_type": "Flatbed",
+    "transit_days": 3,
+    "min_weight": 25000
+  },
+  {
+    "type": "rate",
+    "lane_id": "LANE-NYC-MIA-001",
+    "origin": "New York, NY",
+    "destination": "Miami, FL",
+    "rate_per_mile": 2.95,
+    "flat_rate": 3600.00,
+    "equipment_type": "Dry Van",
+    "transit_days": 3
+  }
+]

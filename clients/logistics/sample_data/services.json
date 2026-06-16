@@ -1,0 +1,38 @@
+[
+  {
+    "type": "service",
+    "service_id": "SVC-STANDARD-FTL",
+    "service_type": "Standard FTL",
+    "description": "Full truckload standard service with guaranteed capacity",
+    "sla": {
+      "pickup_window": "2 hours",
+      "delivery_window": "4 hours",
+      "on_time_target": "95%"
+    },
+    "accessorials": ["liftgate", "driver assist", "inside delivery"]
+  },
+  {
+    "type": "service",
+    "service_id": "SVC-EXPEDITED",
+    "service_type": "Expedited",
+    "description": "Time-critical shipments with dedicated driver and priority routing",
+    "sla": {
+      "pickup_window": "1 hour",
+      "delivery_window": "2 hours",
+      "on_time_target": "99%"
+    },
+    "accessorials": ["team drivers", "GPS tracking", "white glove"]
+  },
+  {
+    "type": "service",
+    "service_id": "SVC-TEMP-CONTROL",
+    "service_type": "Temperature Controlled",
+    "description": "Reefer service for perishable and temperature-sensitive freight",
+    "sla": {
+      "pickup_window": "1.5 hours",
+      "delivery_window": "3 hours",
+      "on_time_target": "97%"
+    },
+    "accessorials": ["continuous temperature monitoring", "pre-cooling", "temperature logs"]
+  }
+]

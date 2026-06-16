@@ -1,0 +1,52 @@
+# logistics client config
+
+client:
+  name: "logistics"
+  description: "Freight carrier document assistant — rates, carriers, service standards"
+
+data:
+  source_dir: ""
+  document_types:
+    - carrier
+    - rate
+    - service
+
+retrieval:
+  top_k: 5
+  rerank: true
+  rerank_top_k: 3
+
+generation:
+  model: "claude-sonnet-4-6"
+  max_tokens: 2048
+  temperature: 0.0
+
+judging:
+  model: "claude-haiku-4-5-20251001"
+  faithfulness:
+    scale: [1, 5]
+    threshold: 3
+  relevance:
+    scale: [1, 5]
+    threshold: 3
+
+reshape:
+  model: "claude-haiku-4-5-20251001"
+  vocabulary_hints:
+    - "carrier"
+    - "MC number"
+    - "DOT number"
+    - "rate per mile"
+    - "lane"
+    - "freight"
+    - "dry van"
+    - "flatbed"
+    - "reefer"
+    - "LTL"
+    - "FTL"
+    - "accessorial"
+    - "transit time"
+
+eval:
+  gold_sets_dir: "clients/logistics/gold_sets"
+  calibration_threshold: 0.8

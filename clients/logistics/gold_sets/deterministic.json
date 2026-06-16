@@ -1,0 +1,27 @@
+[
+  {
+    "question": "What carriers provide dry van service in the Southeast?",
+    "expected_substrings": ["Swift Freight", "Dry Van", "Southeast"],
+    "blocked_substrings": []
+  },
+  {
+    "question": "What is the rate for shipping from Atlanta to Chicago?",
+    "expected_substrings": ["Atlanta", "Chicago", "2.85"],
+    "blocked_substrings": []
+  },
+  {
+    "question": "What are the SLA terms for expedited shipping?",
+    "expected_substrings": ["Expedited", "pickup", "99%"],
+    "blocked_substrings": []
+  },
+  {
+    "question": "Which carriers have flatbed equipment?",
+    "expected_substrings": ["Flatbed", "Heartland"],
+    "blocked_substrings": []
+  },
+  {
+    "question": "What is the rate for reefer shipping from LA to Seattle?",
+    "expected_substrings": ["Reefer", "Los Angeles", "Seattle", "3.10"],
+    "blocked_substrings": []
+  }
+]

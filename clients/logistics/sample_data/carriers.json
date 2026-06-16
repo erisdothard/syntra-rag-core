@@ -1,0 +1,41 @@
+[
+  {
+    "type": "carrier",
+    "mc_number": "MC-123456",
+    "dot_number": "DOT-7890123",
+    "name": "Swift Freight LLC",
+    "authority_status": "active",
+    "insurance": {
+      "liability": "$1,000,000",
+      "cargo": "$250,000"
+    },
+    "equipment_types": ["Dry Van", "Reefer"],
+    "service_area": ["Southeast", "Midwest", "Northeast"]
+  },
+  {
+    "type": "carrier",
+    "mc_number": "MC-654321",
+    "dot_number": "DOT-3210987",
+    "name": "Heartland Hauling Inc",
+    "authority_status": "active",
+    "insurance": {
+      "liability": "$750,000",
+      "cargo": "$100,000"
+    },
+    "equipment_types": ["Flatbed", "Step Deck"],
+    "service_area": ["Midwest", "Plains", "Mountain West"]
+  },
+  {
+    "type": "carrier",
+    "mc_number": "MC-111222",
+    "dot_number": "DOT-4445556",
+    "name": "Pacific Coast Logistics",
+    "authority_status": "active",
+    "insurance": {
+      "liability": "$2,000,000",
+      "cargo": "$500,000"
+    },
+    "equipment_types": ["Dry Van", "Reefer", "Flatbed"],
+    "service_area": ["West Coast", "Pacific Northwest", "Southwest"]
+  }
+]
